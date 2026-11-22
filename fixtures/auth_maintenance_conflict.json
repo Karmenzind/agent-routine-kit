@@ -1,0 +1,67 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "complete",
+    "pagination": {"complete": true},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T02:00:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-auth-a",
+      "name": "synthetic auth maintenance a",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-auth-a",
+        "topic": "synthetic-topic-auth",
+        "action": "maintain-auth",
+        "source": "synthetic-source-auth-a",
+        "deliverable": "synthetic-deliverable-status-a",
+        "output_scope": "synthetic-output-auth-a"
+      },
+      "schedule": {
+        "kind": "instants",
+        "scope": "early",
+        "instants": ["2026-11-22T01:00:00Z"]
+      },
+      "auth_recovery": {"policy": "auto-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-auth-b",
+      "name": "synthetic auth maintenance b",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-auth-b",
+        "topic": "synthetic-topic-auth",
+        "action": "maintain-auth",
+        "source": "synthetic-source-auth-b",
+        "deliverable": "synthetic-deliverable-status-b",
+        "output_scope": "synthetic-output-auth-b"
+      },
+      "schedule": {
+        "kind": "instants",
+        "scope": "later",
+        "instants": ["2026-11-22T04:00:00Z"]
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T07:00:00Z"}
+    }
+  ]
+}

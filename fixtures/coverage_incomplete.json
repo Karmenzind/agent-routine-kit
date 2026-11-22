@@ -1,0 +1,39 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "partial",
+    "pagination": {"complete": false},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T02:00:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-partial",
+      "name": "synthetic partial export",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-partial",
+        "topic": "synthetic-topic-partial",
+        "action": "inspect",
+        "source": "synthetic-source-partial",
+        "deliverable": "synthetic-deliverable-partial",
+        "output_scope": "synthetic-output-partial"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:00:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "complete",
+    "pagination": {"complete": true},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T00:30:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-schedule-sg",
+      "name": "synthetic singapore morning",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-sg",
+        "topic": "synthetic-topic-sg",
+        "action": "inspect",
+        "source": "synthetic-source-sg",
+        "deliverable": "synthetic-deliverable-sg",
+        "output_scope": "synthetic-output-sg"
+      },
+      "schedule": {
+        "kind": "cron",
+        "scope": "singapore-morning",
+        "expression": "0 9 * * *",
+        "timezone": "Asia/Singapore"
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-schedule-utc",
+      "name": "synthetic utc hour",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-utc",
+        "topic": "synthetic-topic-utc",
+        "action": "inspect",
+        "source": "synthetic-source-utc",
+        "deliverable": "synthetic-deliverable-utc",
+        "output_scope": "synthetic-output-utc"
+      },
+      "schedule": {
+        "kind": "cron",
+        "scope": "utc-hour",
+        "expression": "0 1 * * *",
+        "timezone": "UTC"
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    }
+  ]
+}

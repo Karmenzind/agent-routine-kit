@@ -1,0 +1,140 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "complete",
+    "pagination": {"complete": true},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T02:00:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-pending",
+      "name": "synthetic pending",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-pending",
+        "topic": "synthetic-topic-pending",
+        "action": "notify",
+        "source": "synthetic-source-pending",
+        "deliverable": "synthetic-deliverable-pending",
+        "output_scope": "synthetic-output-pending"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:00:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {"owner": "synthetic-owner-a"},
+      "delivery": {"state": "pending"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-http-start",
+      "name": "synthetic http start",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-http",
+        "topic": "synthetic-topic-http",
+        "action": "notify",
+        "source": "synthetic-source-http",
+        "deliverable": "synthetic-deliverable-http",
+        "output_scope": "synthetic-output-http"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:10:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {"owner": "synthetic-owner-a"},
+      "delivery": {
+        "state": "attempted",
+        "attempts": [{"at": "2026-11-22T01:10:00Z", "result": "http_200", "idempotency_key": "synthetic-key-http"}]
+      },
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-exit-zero",
+      "name": "synthetic exit zero",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-exit",
+        "topic": "synthetic-topic-exit",
+        "action": "notify",
+        "source": "synthetic-source-exit",
+        "deliverable": "synthetic-deliverable-exit",
+        "output_scope": "synthetic-output-exit"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:20:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {"owner": "synthetic-owner-a"},
+      "delivery": {
+        "state": "attempted",
+        "attempts": [{"at": "2026-11-22T01:20:00Z", "result": "exit_0", "idempotency_key": "synthetic-key-exit"}]
+      },
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-last-alert",
+      "name": "synthetic last alert",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-alert",
+        "topic": "synthetic-topic-alert",
+        "action": "notify",
+        "source": "synthetic-source-alert",
+        "deliverable": "synthetic-deliverable-alert",
+        "output_scope": "synthetic-output-alert"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:30:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {"owner": "synthetic-owner-a"},
+      "delivery": {"state": "attempted", "last_alert": true, "notify": true},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-receipt",
+      "name": "synthetic receipt",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-receipt",
+        "topic": "synthetic-topic-receipt",
+        "action": "notify",
+        "source": "synthetic-source-receipt",
+        "deliverable": "synthetic-deliverable-receipt",
+        "output_scope": "synthetic-output-receipt"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:40:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {"owner": "synthetic-owner-a"},
+      "delivery": {
+        "state": "attempted",
+        "last_alert": true,
+        "attempts": [{"at": "2026-11-22T01:40:00Z", "result": "started", "idempotency_key": "synthetic-key-receipt"}],
+        "receipt": {"id": "synthetic-receipt-1", "confirmed_at": "2026-11-22T01:41:00Z"}
+      },
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    }
+  ]
+}
