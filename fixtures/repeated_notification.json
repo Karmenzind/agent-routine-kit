@@ -1,0 +1,53 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "complete",
+    "pagination": {"complete": true},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T02:00:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-retry",
+      "name": "synthetic retry",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-retry",
+        "topic": "synthetic-topic-retry",
+        "action": "notify",
+        "source": "synthetic-source-retry",
+        "deliverable": "synthetic-deliverable-retry",
+        "output_scope": "synthetic-output-retry"
+      },
+      "schedule": {"kind": "instants", "scope": "one-shot", "instants": ["2026-11-22T01:00:00Z"]},
+      "auth_recovery": {"policy": "no-login"},
+      "notification": {
+        "owner": "synthetic-owner-a",
+        "events": [
+          {"at": "2026-11-22T01:00:00Z", "idempotency_key": "synthetic-key-1", "kind": "attempt"},
+          {"at": "2026-11-22T01:05:00Z", "idempotency_key": "synthetic-key-1", "kind": "attempt"}
+        ]
+      },
+      "delivery": {
+        "state": "attempted",
+        "attempts": [
+          {"at": "2026-11-22T01:00:00Z", "result": "started", "idempotency_key": "synthetic-key-1"},
+          {"at": "2026-11-22T01:05:00Z", "result": "http_200", "idempotency_key": "synthetic-key-1"}
+        ]
+      },
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    }
+  ]
+}

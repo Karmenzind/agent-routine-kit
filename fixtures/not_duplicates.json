@@ -1,0 +1,91 @@
+{
+  "contract_version": "1",
+  "export": {
+    "source": "manual-normalized",
+    "coverage": "complete",
+    "pagination": {"complete": true},
+    "deadline_coverage": "complete",
+    "exported_at": "2026-11-22T00:00:00Z"
+  },
+  "audit": {
+    "as_of": "2026-11-22T02:00:00Z",
+    "window": {
+      "start": "2026-11-22T00:00:00Z",
+      "end": "2026-11-23T00:00:00Z"
+    }
+  },
+  "routines": [
+    {
+      "id": "synthetic-topic-a",
+      "name": "shared synthetic label",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-shared",
+        "topic": "synthetic-topic-plants",
+        "action": "inspect",
+        "source": "synthetic-source-shared",
+        "deliverable": "synthetic-deliverable-digest",
+        "output_scope": "synthetic-output-a"
+      },
+      "schedule": {
+        "kind": "instants",
+        "scope": "one-shot",
+        "instants": ["2026-11-22T01:00:00Z"]
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-topic-b",
+      "name": "shared synthetic label",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-shared",
+        "topic": "synthetic-topic-tools",
+        "action": "inspect",
+        "source": "synthetic-source-other",
+        "deliverable": "synthetic-deliverable-digest",
+        "output_scope": "synthetic-output-b"
+      },
+      "schedule": {
+        "kind": "instants",
+        "scope": "one-shot",
+        "instants": ["2026-11-22T01:30:00Z"]
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    },
+    {
+      "id": "synthetic-deliverable-c",
+      "name": "shared synthetic label",
+      "identity": {
+        "account": "synthetic-account-alpha",
+        "cli": "synthetic-cli-alpha",
+        "profile": "synthetic-profile-alpha"
+      },
+      "target": {
+        "resource_id": "synthetic-resource-other",
+        "topic": "synthetic-topic-plants",
+        "action": "inspect",
+        "source": "synthetic-source-shared",
+        "deliverable": "synthetic-deliverable-sheet",
+        "output_scope": "synthetic-output-c"
+      },
+      "schedule": {
+        "kind": "instants",
+        "scope": "one-shot",
+        "instants": ["2026-11-22T03:00:00Z"]
+      },
+      "auth_recovery": {"policy": "no-login"},
+      "deadline": {"at": "2026-11-22T06:00:00Z"}
+    }
+  ]
+}
