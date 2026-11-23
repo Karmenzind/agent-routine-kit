@@ -15,7 +15,7 @@ Use this skill for an offline review of routines that were exported and normaliz
 
 1. Confirm the file is a local synthetic or authorized export with secrets removed.
 2. Run `python3 -m agent_routine_kit audit SNAPSHOT.json --format both`.
-3. Treat exit 2 as "no audit". Treat exit 1 as "read every blocking finding". Treat exit 0 as all-clear under rules_version 1 only.
+3. Treat exit 2 as "no audit". Treat exit 1 as "read every blocking finding". Treat exit 0 as all-clear under rules_version 2 only.
 4. Preserve unknown results. Missing account, profile, topic, deliverable, time zone, cron support, DST meaning, pagination, or deadline boundary is unknown, not healthy.
 5. Do not call a schedule collision a duplicate, and do not call `last_alert`, `notify`, exit 0, or an HTTP start a delivery.
 6. Stop when a finding blocks all-clear. Changing a live routine needs a separate approval, a new audit of the replacement, and a rollback path that records this `rules_version`.

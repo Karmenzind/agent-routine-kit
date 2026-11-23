@@ -39,11 +39,16 @@ class DocTests(unittest.TestCase):
         rules = (ROOT / "docs" / "rules.md").read_text()
         contract = (ROOT / "docs" / "contract.md").read_text()
         changelog = (ROOT / "CHANGELOG.md").read_text()
-        self.assertIn("rules_version: 1", rules)
+        self.assertIn("rules_version: 2", rules)
         self.assertIn("contract_version: 1", contract)
         self.assertIn("schema_version: 1", contract)
         self.assertIn("report_version: 1", contract)
-        self.assertIn("rules_version", changelog)
+        self.assertIn("rules version 2", changelog)
+        self.assertIn("flexible: true", rules)
+        self.assertIn("cron", contract)
+        self.assertIn("routines", contract)
+        versions = (ROOT / "src" / "agent_routine_kit" / "versions.py").read_text()
+        self.assertIn('RULES_VERSION = "2"', versions)
 
     def test_runtime_dependencies_are_empty(self):
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())

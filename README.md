@@ -12,7 +12,7 @@ Make agent routines reliable enough to review offline, and cut avoidable model w
 - Flag unknown and unsupported fields instead of ignoring them.
 - Report duplicate-target candidates only when account, CLI, profile, resource, topic, action, source, deliverable, and output scope are all known and equal.
 - Report schedule collisions from real UTC instants, including different time zones, and keep that result separate from duplicate detection.
-- Report unknown schedules for missing zones, unsupported cron, flexible windows, and DST gaps or ambiguous times.
+- Report unknown schedules for missing or invalid zones, unsupported cron, flexible windows, explicit flexible cron, and DST gaps or ambiguous times.
 - Report auth-policy conflicts for a known shared account and profile, and leave unknown identities unresolved.
 - Check notification ownership and whether delivery evidence is a real receipt.
 - Block all-clear when export coverage, pagination, or deadline boundaries are incomplete.
@@ -28,21 +28,21 @@ PYTHONPATH=src python3 -m agent_routine_kit audit fixtures/auth_maintenance_conf
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-`--format json` writes JSON to stdout and is the default. `--format text` writes the human report to stdout. `--format both` writes JSON to stdout and the human report to stderr. `--output report.json` is the only file write.
+`--format json` writes JSON to stdout and is the default. `--format text` writes the human report to stdout. `--format both` writes JSON to stdout and the human report to stderr. `--output report.json` is the only file write. The command refuses an output path that is the snapshot, including a resolved path, an existing symlink, a hard link, or an alias swapped in before the file is opened. It checks the opened file against the snapshot that was read before truncating, including when the input path is later repointed, and fails closed when that identity cannot be established. Exit 2 leaves the snapshot unchanged and prints no success report. A separate output path still receives the report.
 
-Exit `0` means a report was produced and `all_clear` is true. Exit `1` means a report was produced and `all_clear` is false. Exit `2` means the file, JSON, or `contract_version` could not be audited.
+Exit `0` means a report was produced and `all_clear` is true. Exit `1` means a report was produced and `all_clear` is false. Exit `2` means the file, JSON, contract, or `routines` list could not be audited, the output path identifies the snapshot, the output identity could not be established, or the output write failed.
 
 ## Implemented
 
 Version 0.1.0 implements the local audit described above:
 
-- contract, schema, rules, and report version `1`
+- contract, schema, and report version `1`; rules version `2`
 - duplicate scope, schedule subset, auth policy, delivery receipts, missed runs, and deadlines
 - synthetic fixtures under `fixtures/`
 - portable instructions in `SKILL.md`
 - the normalized ingest contract in `docs/contract.md` and the rules in `docs/rules.md`
 
-`all_clear` is true only when no finding blocks it. A listed schedule collision blocks it and is still not a duplicate. An honest `pending` delivery is reported as pending and does not by itself block all-clear. `last_alert`, `notify`, process exit 0, and an HTTP start do block all-clear unless a receipt id and `confirmed_at` are both present.
+`all_clear` is true only when no finding blocks it. A listed schedule collision blocks it and is still not a duplicate. An honest `pending` delivery is reported as pending and does not by itself block all-clear. `last_alert` (including a nonempty timestamp), `notify`, a delivered claim without a receipt, process exit 0, and an HTTP start do block all-clear unless a receipt id and aware `confirmed_at` are both present. Explicit boolean `flexible: true` on cron is unknown. A missing `routines` list is rejected. Invalid zones and malformed notification or run values produce a blocking report instead of aborting.
 
 ## Planned
 
@@ -74,7 +74,7 @@ Any later mutation must be a separate change. It needs its own approval, a new a
 | `contract_version` | 1 | the snapshot fields change incompatibly |
 | `schema_version` | 1 | the report fields change incompatibly |
 | `report_version` | 1 | the report document changes incompatibly |
-| `rules_version` | 1 | a blocking rule changes |
+| `rules_version` | 2 | a blocking rule changes |
 
 A breaking change to any of those values needs owner approval and a changelog note. Reports record all four values so a later reader can see which rules produced the decision.
 
@@ -93,7 +93,7 @@ agent-routine-kit
 report_version: 1
 contract_version: 1
 schema_version: 1
-rules_version: 1
+rules_version: 2
 kit_version: 0.1.0
 all_clear: false
 coverage_status: complete
