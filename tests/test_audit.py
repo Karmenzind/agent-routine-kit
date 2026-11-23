@@ -158,7 +158,7 @@ class ContractTests(unittest.TestCase):
         listed = [line.split()[1] for line in text.splitlines() if line.startswith("finding: ")]
         self.assertEqual(listed, codes(report))
         self.assertIn(f"all_clear: {str(report['all_clear']).lower()}", text)
-        self.assertIn("rules_version: 1", text)
+        self.assertIn(f"rules_version: {RULES_VERSION}", text)
 
 
 class DuplicateTests(unittest.TestCase):
@@ -540,6 +540,309 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(report["pairs"], [])
         self.assertNotIn("duplicate_candidate", codes(report))
         self.assertFalse(report["all_clear"])
+
+
+def _daily_cron(routine_id, flexible="omit"):
+    schedule = {
+        "kind": "cron",
+        "scope": "daily",
+        "expression": "0 1 * * *",
+        "timezone": "UTC",
+    }
+    if flexible != "omit":
+        schedule["flexible"] = flexible
+    return routine(routine_id, schedule=schedule)
+
+
+def _instant(routine_id, at):
+    return routine(
+        routine_id,
+        schedule={"kind": "instants", "scope": "one-shot", "instants": [at]},
+    )
+
+
+class ApprovedRepairTests(unittest.TestCase):
+    def test_omitted_routines_is_rejected_like_a_wrong_type_list(self):
+        base = json.loads((FIXTURES / "healthy_minimal.json").read_text())
+        missing = copy.deepcopy(base)
+        del missing["routines"]
+        with self.subTest("missing"):
+            with self.assertRaises(ContractError) as caught:
+                audit_snapshot(missing)
+            self.assertIn("routines", str(caught.exception))
+        wrong = copy.deepcopy(base)
+        wrong["routines"] = {}
+        with self.subTest("wrong type"):
+            with self.assertRaises(ContractError) as caught:
+                audit_snapshot(wrong)
+            self.assertIn("routines", str(caught.exception))
+
+    def test_explicit_empty_routines_is_a_valid_inventory(self):
+        report = audit_snapshot(envelope([]))
+        self.assertTrue(report["all_clear"])
+        self.assertEqual(report["findings"], [])
+        self.assertEqual(report["summary"]["routine_count"], 0)
+        self.assertEqual(report["routines"], [])
+        self.assertEqual(report["pairs"], [])
+        self.assertEqual(report["coverage"]["status"], "complete")
+
+    def test_explicit_flexible_cron_blocks_overlap_and_miss(self):
+        report = audit_snapshot(
+            envelope(
+                [
+                    _daily_cron("synthetic-flex-cron", True),
+                    _instant("synthetic-overlap", "2026-11-22T01:00:00Z"),
+                    _instant("synthetic-miss", "2026-11-22T03:00:00Z"),
+                ]
+            )
+        )
+        self.assertEqual(pair_of(report, "synthetic-flex-cron", "synthetic-overlap")["schedule"], "unknown")
+        self.assertEqual(pair_of(report, "synthetic-flex-cron", "synthetic-miss")["schedule"], "unknown")
+        self.assertEqual(pair_of(report, "synthetic-overlap", "synthetic-miss")["schedule"], "no_collision")
+        finding = next(
+            item
+            for item in report["findings"]
+            if item["code"] == "schedule_unknown" and item["subjects"] == ["synthetic-flex-cron"]
+        )
+        self.assertEqual(finding["reason"], "flexible_cron")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertNotIn("schedule_collision", codes(report))
+        self.assertFalse(report["all_clear"])
+        by_id = {item["id"]: item["schedule_status"] for item in report["routines"]}
+        self.assertEqual(by_id["synthetic-flex-cron"], "unknown")
+        self.assertEqual(by_id["synthetic-overlap"], "resolved")
+        self.assertEqual(by_id["synthetic-miss"], "resolved")
+
+    def test_fixed_cron_and_omitted_flexible_keep_resolved_results(self):
+        for label, flexible in (("false", False), ("omitted", "omit")):
+            with self.subTest(label):
+                report = audit_snapshot(
+                    envelope(
+                        [
+                            _daily_cron("synthetic-fixed-cron", flexible),
+                            _instant("synthetic-overlap", "2026-11-22T01:00:00Z"),
+                            _instant("synthetic-miss", "2026-11-22T03:00:00Z"),
+                        ]
+                    )
+                )
+                self.assertEqual(
+                    pair_of(report, "synthetic-fixed-cron", "synthetic-overlap")["schedule"],
+                    "collision",
+                )
+                self.assertEqual(
+                    pair_of(report, "synthetic-fixed-cron", "synthetic-miss")["schedule"],
+                    "no_collision",
+                )
+                self.assertEqual(
+                    pair_of(report, "synthetic-overlap", "synthetic-miss")["schedule"],
+                    "no_collision",
+                )
+                reasons = [
+                    item["reason"]
+                    for item in report["findings"]
+                    if item["code"] == "schedule_unknown"
+                ]
+                self.assertNotIn("flexible_cron", reasons)
+                self.assertIn("schedule_collision", codes(report))
+
+    def test_delivered_claim_without_receipt_blocks(self):
+        item = routine(
+            "synthetic-delivered-claim",
+            notification={"owner": "synthetic-owner-a"},
+            delivery={"state": "delivered", "attempts": [{"result": "ok"}]},
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "delivery_not_confirmed")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertEqual(finding["subjects"], ["synthetic-delivered-claim"])
+        self.assertEqual(report["routines"][0]["delivery_status"], "not_delivered")
+        self.assertFalse(report["all_clear"])
+
+    def test_pending_last_alert_timestamp_without_receipt_blocks(self):
+        item = routine(
+            "synthetic-alert-claim",
+            notification={"owner": "synthetic-owner-a"},
+            delivery={"state": "pending", "last_alert": "2026-11-22T01:00:00Z"},
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "delivery_not_confirmed")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertEqual(finding["subjects"], ["synthetic-alert-claim"])
+        self.assertNotEqual(report["routines"][0]["delivery_status"], "pending")
+        self.assertEqual(report["routines"][0]["delivery_status"], "not_delivered")
+        self.assertFalse(report["all_clear"])
+
+    def test_valid_receipt_confirms_the_same_claim_examples(self):
+        delivered = routine(
+            "synthetic-delivered-receipt",
+            notification={"owner": "synthetic-owner-a"},
+            delivery={
+                "state": "confirmed",
+                "attempts": [{"result": "ok"}],
+                "receipt": {"id": "synthetic-receipt-delivered", "confirmed_at": "2026-11-22T01:05:00Z"},
+            },
+        )
+        alert = routine(
+            "synthetic-alert-receipt",
+            notification={"owner": "synthetic-owner-a"},
+            schedule={"instants": ["2026-11-22T01:30:00Z"]},
+            delivery={
+                "state": "confirmed",
+                "last_alert": "2026-11-22T01:00:00Z",
+                "receipt": {"id": "synthetic-receipt-alert", "confirmed_at": "2026-11-22T01:06:00Z"},
+            },
+        )
+        report = audit_snapshot(envelope([delivered, alert]))
+        by_id = {item["id"]: item["delivery_status"] for item in report["routines"]}
+        self.assertEqual(by_id["synthetic-delivered-receipt"], "confirmed")
+        self.assertEqual(by_id["synthetic-alert-receipt"], "confirmed")
+        self.assertNotIn("delivery_not_confirmed", codes(report))
+        self.assertTrue(report["all_clear"])
+
+    def test_honest_pending_with_known_owner_and_future_deadline_stays_nonblocking(self):
+        item = routine(
+            "synthetic-honest-pending",
+            notification={"owner": "synthetic-owner-a"},
+            delivery={"state": "pending"},
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "delivery_pending")
+        self.assertFalse(finding["blocks_all_clear"])
+        self.assertEqual(report["routines"][0]["delivery_status"], "pending")
+        self.assertNotIn("delivery_not_confirmed", codes(report))
+        self.assertTrue(report["all_clear"])
+
+    def test_relative_timezone_is_unknown_not_an_abort(self):
+        bad = routine(
+            "synthetic-bad-zone",
+            schedule={
+                "kind": "cron",
+                "scope": "daily",
+                "expression": "0 1 * * *",
+                "timezone": "A/../B",
+            },
+        )
+        utc = routine(
+            "synthetic-utc-zone",
+            schedule={
+                "kind": "cron",
+                "scope": "daily",
+                "expression": "0 9 * * *",
+                "timezone": "UTC",
+            },
+        )
+        report = audit_snapshot(envelope([bad, utc]))
+        finding = next(
+            item
+            for item in report["findings"]
+            if item["code"] == "schedule_unknown" and item["subjects"] == ["synthetic-bad-zone"]
+        )
+        self.assertEqual(finding["reason"], "timezone_invalid")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertEqual(pair_of(report, "synthetic-bad-zone", "synthetic-utc-zone")["schedule"], "unknown")
+        by_id = {item["id"]: item["schedule_status"] for item in report["routines"]}
+        self.assertEqual(by_id["synthetic-bad-zone"], "unknown")
+        self.assertEqual(by_id["synthetic-utc-zone"], "resolved")
+        self.assertFalse(report["all_clear"])
+
+    def test_non_list_events_are_a_blocking_malformed_field(self):
+        item = routine(
+            "synthetic-events-object",
+            notification={"owner": "synthetic-owner-a", "events": {"kind": "notify"}},
+            delivery={"state": "pending"},
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "malformed_field")
+        self.assertEqual(finding["reason"], "wrong_type")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertFalse(report["all_clear"])
+
+    def test_non_object_event_is_a_blocking_malformed_field(self):
+        for label, event in (("null", None), ("string", "notify")):
+            with self.subTest(label):
+                item = routine(
+                    "synthetic-non-object-event",
+                    notification={"owner": "synthetic-owner-a", "events": [event]},
+                    delivery={"state": "pending"},
+                )
+                report = audit_snapshot(envelope([item]))
+                finding = next(entry for entry in report["findings"] if entry["code"] == "malformed_field")
+                self.assertEqual(finding["reason"], "wrong_type")
+                self.assertEqual(
+                    finding["fields"],
+                    ["routine:synthetic-non-object-event.notification.events[0]"],
+                )
+                self.assertTrue(finding["blocks_all_clear"])
+                self.assertFalse(report["all_clear"])
+                pending = next(entry for entry in report["findings"] if entry["code"] == "delivery_pending")
+                self.assertFalse(pending["blocks_all_clear"])
+                self.assertEqual(report["routines"][0]["delivery_status"], "pending")
+
+    def test_non_string_event_kind_is_a_blocking_malformed_field(self):
+        item = routine(
+            "synthetic-kind-list",
+            notification={"owner": "synthetic-owner-a", "events": [{"kind": []}]},
+            delivery={"state": "pending"},
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "malformed_field")
+        self.assertEqual(finding["reason"], "wrong_type")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertFalse(report["all_clear"])
+
+    def test_non_string_run_status_is_blocking_unknown_status(self):
+        item = routine(
+            "synthetic-status-list",
+            runs=[{"scheduled_at": "2026-11-22T01:00:00Z", "status": []}],
+        )
+        report = audit_snapshot(envelope([item]))
+        finding = next(item for item in report["findings"] if item["code"] == "run_status_unknown")
+        self.assertEqual(finding["reason"], "status_unknown")
+        self.assertTrue(finding["blocks_all_clear"])
+        self.assertFalse(report["all_clear"])
+
+    def test_valid_pending_events_and_run_statuses_keep_current_results(self):
+        pending = routine(
+            "synthetic-valid-pending-event",
+            notification={
+                "owner": "synthetic-owner-a",
+                "events": [
+                    {
+                        "at": "2026-11-22T01:00:00Z",
+                        "idempotency_key": "synthetic-key-pending",
+                        "kind": "attempt",
+                    }
+                ],
+            },
+            delivery={"state": "pending"},
+        )
+        ran = routine(
+            "synthetic-valid-ran",
+            schedule={"instants": ["2026-11-22T01:20:00Z"]},
+            runs=[{"scheduled_at": "2026-11-22T01:00:00Z", "status": "ran"}],
+        )
+        skipped = routine(
+            "synthetic-valid-skipped",
+            schedule={"instants": ["2026-11-22T01:40:00Z"]},
+            runs=[{"scheduled_at": "2026-11-22T01:10:00Z", "status": "skipped"}],
+        )
+        report = audit_snapshot(envelope([pending, ran, skipped]))
+        by_id = {item["id"]: item for item in report["routines"]}
+        self.assertEqual(by_id["synthetic-valid-pending-event"]["delivery_status"], "pending")
+        pending_finding = next(
+            item
+            for item in report["findings"]
+            if item["code"] == "delivery_pending" and item["subjects"] == ["synthetic-valid-pending-event"]
+        )
+        self.assertFalse(pending_finding["blocks_all_clear"])
+        self.assertNotIn("malformed_field", codes(report))
+        self.assertNotIn("run_status_unknown", codes(report))
+        self.assertTrue(report["all_clear"])
+
+    def test_report_rules_version_is_two(self):
+        report = audit_snapshot(envelope([routine("synthetic-routine-1")]))
+        self.assertEqual(report["rules_version"], "2")
+        self.assertEqual(report["rules_version"], RULES_VERSION)
 
 
 if __name__ == "__main__":

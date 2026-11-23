@@ -138,7 +138,7 @@ def _resolve_cron(schedule, bounds):
         return _unknown("timezone_missing")
     try:
         zone = ZoneInfo(timezone_name)
-    except ZoneInfoNotFoundError:
+    except (ZoneInfoNotFoundError, ValueError):
         return _unknown("timezone_invalid")
     fields = parse_cron(schedule.get("expression"))
     if fields is None:
@@ -203,6 +203,8 @@ def resolve_schedule(schedule, bounds):
         start, end = bounds
         return _instants(item for item in instants if start <= item < end)
     if kind == "cron":
+        if schedule.get("flexible") is True:
+            return _unknown("flexible_cron")
         return _resolve_cron(schedule, bounds)
     if kind == "window":
         if schedule.get("flexible") is not False:

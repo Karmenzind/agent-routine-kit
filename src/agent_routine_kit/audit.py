@@ -212,7 +212,7 @@ def _require_contract(data):
     version = data.get("contract_version", None)
     if version != CONTRACT_VERSION:
         raise ContractError(f"unsupported contract_version: {version!r}")
-    if "routines" in data and not isinstance(data["routines"], list):
+    if "routines" not in data or not isinstance(data["routines"], list):
         raise ContractError("routines must be a list")
     if "export" in data and not isinstance(data["export"], dict):
         raise ContractError("export must be an object")
@@ -338,6 +338,40 @@ def _shape_findings(data):
                         severity="error",
                     )
                 )
+        notification = routine.get("notification")
+        if isinstance(notification, dict) and "events" in notification and not isinstance(notification["events"], list):
+            findings.append(
+                _finding(
+                    "malformed_field",
+                    "wrong_type",
+                    subjects=[label] if not str(label).startswith("index-") else [],
+                    fields=[f"{base}.notification.events"],
+                    severity="error",
+                )
+            )
+        elif isinstance(notification, dict) and isinstance(notification.get("events"), list):
+            for event_index, event in enumerate(notification["events"]):
+                if not isinstance(event, dict):
+                    findings.append(
+                        _finding(
+                            "malformed_field",
+                            "wrong_type",
+                            subjects=[label] if not str(label).startswith("index-") else [],
+                            fields=[f"{base}.notification.events[{event_index}]"],
+                            severity="error",
+                        )
+                    )
+                    continue
+                if "kind" in event and not isinstance(event.get("kind"), str):
+                    findings.append(
+                        _finding(
+                            "malformed_field",
+                            "wrong_type",
+                            subjects=[label] if not str(label).startswith("index-") else [],
+                            fields=[f"{base}.notification.events[{event_index}].kind"],
+                            severity="error",
+                        )
+                    )
         delivery = routine.get("delivery")
         if isinstance(delivery, dict) and "attempts" in delivery and not isinstance(delivery["attempts"], list):
             findings.append(
@@ -411,14 +445,18 @@ def _misleading_signals(routine):
     signals = set()
     delivery = routine.get("delivery")
     if isinstance(delivery, dict):
-        if delivery.get("last_alert") is True:
+        last_alert = delivery.get("last_alert")
+        if last_alert is True or (isinstance(last_alert, str) and last_alert.strip() != ""):
             signals.add("last_alert")
         if delivery.get("notify") is True:
             signals.add("notify")
         claimed = delivery.get("claimed")
         if isinstance(claimed, str) and claimed.strip().lower() in CLAIMED_DELIVERED:
             signals.add("claimed")
-        if delivery.get("state") == "confirmed" and not _valid_receipt(delivery):
+        state = delivery.get("state")
+        if isinstance(state, str) and state.strip().lower() in CLAIMED_DELIVERED and not _valid_receipt(delivery):
+            signals.add("state_delivered")
+        if state == "confirmed" and not _valid_receipt(delivery):
             signals.add("state_confirmed")
         attempts = delivery.get("attempts")
         if isinstance(attempts, list):
@@ -428,8 +466,10 @@ def _misleading_signals(routine):
     notification = routine.get("notification")
     if isinstance(notification, dict) and isinstance(notification.get("events"), list):
         for event in notification["events"]:
-            if isinstance(event, dict) and event.get("kind") in MISLEADING_RESULTS | {"last_alert"}:
-                signals.add(event["kind"])
+            if isinstance(event, dict):
+                kind = event.get("kind")
+                if isinstance(kind, str) and kind in MISLEADING_RESULTS | {"last_alert"}:
+                    signals.add(kind)
     return sorted(signals)
 
 
@@ -599,7 +639,7 @@ def _audit_routine(routine, bounds, as_of, deadline_complete):
                         detail=f"scheduled_at={scheduled_at}",
                     )
                 )
-            elif run_status not in {"ran", "skipped"}:
+            elif not isinstance(run_status, str) or run_status not in {"ran", "skipped"}:
                 findings.append(
                     _finding(
                         "run_status_unknown",
